@@ -18,6 +18,7 @@ package org.cloudifysource.cosmo.orchestrator.integration;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
+import com.google.common.io.InputSupplier;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
@@ -52,6 +53,7 @@ import javax.inject.Inject;
 import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.FileVisitResult;
@@ -149,11 +151,13 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             resourceMonitor.insertFact(agent);
         }
 
-        // zip webserver plugin
         createZipForPlugin(
-                "celery/app/cosmo/cloudify/tosca/artifacts/plugin/python_webserver/installer",
+                "celery/app/cosmo/cloudify/tosca/artifacts/plugin/diamond_installer/installer",
                 temporaryDirectory.get(),
-                "python-webserver-installer.zip");
+                "diamond-installer.zip");
+        copyResourceTarget("diamond_collectors/celeryd/celeryd.py",
+                           temporaryDirectory.get(),
+                           "celeryd.py");
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
@@ -185,4 +189,19 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         packagedPluginBuilder.build().write(new File(targetDir, targetName));
     }
 
+    private static void copyResourceTarget(String resource,
+                                           File targetDir,
+                                           String fileName) {
+        final URL resourceUrl = Resources.getResource(resource);
+        try {
+            com.google.common.io.Files.copy(new InputSupplier<InputStream>() {
+                @Override
+                public InputStream getInput() throws IOException {
+                  return resourceUrl.openStream();
+                }
+            }, new File(targetDir, fileName));
+        } catch (IOException e) {
+            throw Throwables.propagate(e);
+        }
+    }
 }

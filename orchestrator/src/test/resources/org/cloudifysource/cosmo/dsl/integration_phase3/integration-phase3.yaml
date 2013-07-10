@@ -3,7 +3,7 @@ definitions:
     imports:
         - "cloudify.types"
         - "vagrant-host-provisioner.yaml"
-        - "python-webserver-installer.yaml"
+        - "diamond-installer.yaml"
 
     service_templates:
         simple_web_server:
@@ -27,6 +27,22 @@ definitions:
                 webserver_middleware:
                     type: "cloudify.tosca.types.web_server"
                     properties:
-                        port: 8888
+                        diamond_config:
+                            workdir: '/home/vagrant'
+                            user: 'vagrant'
+                            group: 'vagrant'
+                            collectors_reload_interval: '3600'
+                            riemann_host: '10.0.0.1'
+                            riemann_port: '5555'
+                            riemann_transport: 'tcp'
+                            collector_properties:
+                                meta:
+                                    url: 'http://10.0.0.1:53229/celeryd.py'
+                                    name: 'CeleryRegisteredTasksCollector'
+                                    short_name: 'celeryd'
+                                config:
+                                    path: 'celeryd'
+                                    broker_url: 'amqp://guest:guest@10.0.0.1:5672//'
+                                    interval: '10'
                     relationships:
                         cloudify.tosca.relationships.hosted_on: "webserver_host"

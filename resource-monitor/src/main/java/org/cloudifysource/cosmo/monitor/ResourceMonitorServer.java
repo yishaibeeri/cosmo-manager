@@ -248,7 +248,13 @@ public class ResourceMonitorServer implements AutoCloseable {
 
             @Override
             public void onFailure(Throwable t) {
-                ResourceMonitorServer.this.onConsumerFailure(t);
+                try {
+                    ResourceMonitorServer.this.onConsumerFailure(t);
+                } catch (Exception e) {
+                    t.addSuppressed(e);
+                    e.printStackTrace();
+                    throw Throwables.propagate(t);
+                }
             }
         };
         consumer.addListener(resourceMonitorTopic, result.listener);
@@ -266,6 +272,7 @@ public class ResourceMonitorServer implements AutoCloseable {
                     try {
                         ResourceMonitorServer.this.onDroolsFailure(t);
                     } catch (Exception e) {
+                        e.printStackTrace();
                         t.addSuppressed(e);
                         throw Throwables.propagate(e);
                     } finally {

@@ -21,6 +21,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.Resources;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.diamond.config.DiamondProcessConfig;
 import org.cloudifysource.cosmo.dsl.packaging.DSLPackage;
 import org.cloudifysource.cosmo.fileserver.config.JettyFileServerConfig;
 import org.cloudifysource.cosmo.messaging.config.MockMessageConsumerConfig;
@@ -39,6 +40,7 @@ import org.cloudifysource.cosmo.tasks.config.CeleryWorkerProcessConfig;
 import org.cloudifysource.cosmo.tasks.config.EventHandlerConfig;
 import org.cloudifysource.cosmo.tasks.config.JythonProxyConfig;
 import org.cloudifysource.cosmo.tasks.config.TaskExecutorConfig;
+import org.hibernate.validator.constraints.NotEmpty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
@@ -93,7 +95,8 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
             TaskExecutorConfig.class,
             EventHandlerConfig.class,
             JythonProxyConfig.class,
-            CeleryWorkerProcessConfig.class
+            CeleryWorkerProcessConfig.class,
+            DiamondProcessConfig.class
     })
     @PropertySource("org/cloudifysource/cosmo/orchestrator/integration/config/test.properties")
     static class Config extends TestConfig {
@@ -107,9 +110,15 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         @Inject
         private TemporaryDirectoryConfig.TemporaryDirectory temporaryDirectory;
 
+        @NotEmpty
+        @Value("${cosmo.test.file-server.temp-root}")
+        private String fileServerTempRoot;
+
         @PostConstruct
         public void setResourceBase() {
-            this.resourceBase = temporaryDirectory.get().getAbsolutePath();
+            File root = new File(temporaryDirectory.get(), fileServerTempRoot);
+            root.mkdir();
+            this.resourceBase = root.getAbsolutePath();
         }
     }
 
@@ -155,9 +164,6 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
                 "celery/app/cosmo/cloudify/tosca/artifacts/plugin/diamond_installer/installer",
                 temporaryDirectory.get(),
                 "diamond-installer.zip");
-        copyResourceTarget("diamond_collectors/celeryd/celeryd.py",
-                           temporaryDirectory.get(),
-                           "celeryd.py");
 
         final Map<String, Object> workitemFields = Maps.newHashMap();
         workitemFields.put("dsl", dslLocation);
@@ -189,19 +195,4 @@ public class VagrantAndWebserverServiceIT extends AbstractTestNGSpringContextTes
         packagedPluginBuilder.build().write(new File(targetDir, targetName));
     }
 
-    private static void copyResourceTarget(String resource,
-                                           File targetDir,
-                                           String fileName) {
-        final URL resourceUrl = Resources.getResource(resource);
-        try {
-            com.google.common.io.Files.copy(new InputSupplier<InputStream>() {
-                @Override
-                public InputStream getInput() throws IOException {
-                  return resourceUrl.openStream();
-                }
-            }, new File(targetDir, fileName));
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
-    }
 }

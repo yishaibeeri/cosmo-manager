@@ -28,6 +28,10 @@ definitions:
                     type: "cloudify.tosca.types.web_server"
                     properties:
                         diamond_config:
+                            # properties for management machine (test machine)
+#                            skip_install_dependencies: 'true'
+#                            skip_workaround: 'true'
+
                             workdir: '/home/vagrant'
                             user: 'vagrant'
                             group: 'vagrant'
@@ -35,14 +39,14 @@ definitions:
                             riemann_host: '10.0.0.1'
                             riemann_port: '5555'
                             riemann_transport: 'tcp'
-                            collector_properties:
-                                meta:
-                                    url: 'http://10.0.0.1:53229/celeryd.py'
-                                    name: 'CeleryRegisteredTasksCollector'
-                                    short_name: 'celeryd'
-                                config:
-                                    path: 'celeryd'
-                                    broker_url: 'amqp://guest:guest@10.0.0.1:5672//'
-                                    interval: '10'
+                            collectors:
+                                celeryd:
+                                    meta:
+                                        url: 'http://10.0.0.1:53229/celeryd.py'
+                                        name: 'CeleryRegisteredTasksCollector'
+                                    config:
+                                        path: 'celeryd'
+                                        broker_url: 'amqp://guest:guest@10.0.0.1:5672//'
+                                        interval: '10'
                     relationships:
                         cloudify.tosca.relationships.hosted_on: "webserver_host"

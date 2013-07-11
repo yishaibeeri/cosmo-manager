@@ -51,7 +51,7 @@ import java.util.Map;
 public class DSLProcessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(DSLProcessor.class);
-    private static final ObjectMapper JSON_OBJECT_MAPPER = newObjectMapper(new JsonFactory());
+    public static final ObjectMapper JSON_OBJECT_MAPPER = newObjectMapper(new JsonFactory());
     private static final ObjectMapper YAML_OBJECT_MAPPER = newObjectMapper(new YAMLFactory());
 
     private static final String ALIAS_MAPPING_RESOURCE = "org/cloudifysource/cosmo/dsl/alias-mappings.yaml";

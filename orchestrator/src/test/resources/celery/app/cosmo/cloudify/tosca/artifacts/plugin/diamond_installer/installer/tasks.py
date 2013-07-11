@@ -23,30 +23,43 @@ import os
 from os import path
 from cosmo.celery import celery
 
-@celery.task
-def install(diamond_config, __cloudify_id, **kwargs):
 
+@celery.task
+def install(diamond_config, **kwargs):
     # install dependencies
-    install_dependencies()
-
+    if not 'skip_install_dependencies' in diamond_config.keys():
+        install_dependencies()
     config_paths = ConfigPaths(diamond_config)
-
     make_directories(config_paths)
-
-    create_main_config(config_paths, diamond_config, cloudify_id)
-
-    # TODO extract to different task in some new interface
-    collector_properties = diamond_config['collector_properties']
-    install_collector(collector_properties, config_paths)
-
-    workaround_temp_diamond_bug(diamond_config)
+    create_main_config(config_paths, diamond_config)
+    install_collectors(config_paths, diamond_config)
+    if not 'skip_workaround' in diamond_config.keys():
+        workaround_temp_diamond_bug(diamond_config)
 
 
 @celery.task
-def start(diamond_config, __cloudify_id, **kwargs):
+def start(diamond_config, **kwargs):
     config_paths = ConfigPaths(diamond_config)
     command = 'nohup diamond -c {0}'.format(config_paths.main_config_path)
     os.system(command)
+
+
+@celery.task
+def stop(diamond_config, **kwargs):
+    config_paths = ConfigPaths(diamond_config)
+    if not path.exists(config_paths.diamond_pid_path):
+        return
+    with open(config_paths.diamond_pid_path, 'r') as f:
+        os.system("kill {0}".format(f.read()))
+
+
+@celery.task
+def restart(diamond_config, **kwargs):
+    stop(diamond_config)
+    config_paths = ConfigPaths(diamond_config)
+    create_main_config(config_paths, diamond_config)
+    install_collectors(config_paths, diamond_config)
+    start(diamond_config)
 
 
 class ConfigPaths(object):
@@ -59,6 +72,7 @@ class ConfigPaths(object):
         self.main_config_path = path.join(self.root_dir, 'diamond.conf')
         self.diamond_pid_path = path.join(self.root_dir, 'diamond.pid')
         self.diamond_log_path = path.join(self.logs_dir, 'diamond.log')
+
 
 def install_dependencies():
     os.system("sudo pip install diamond")
@@ -73,7 +87,7 @@ def make_directories(config_paths):
     os.mkdir(config_paths.logs_dir)
 
 
-def create_main_config(config_paths, diamond_config, cloudify_id):
+def create_main_config(config_paths, diamond_config):
     # load template diamond configuration (only possible after 'pip install diamond')
     from configobj import ConfigObj
     config_template = ConfigObj('/etc/diamond/diamond.conf.example')
@@ -94,7 +108,7 @@ def create_main_config(config_paths, diamond_config, cloudify_id):
     config_template['logger_root']['level'] = 'DEBUG'
     config_template['handler_rotated_file']['level'] = 'DEBUG'
     config_template['handler_rotated_file']['args'] = ["('{0}'".format(config_paths.diamond_log_path),
-                                                       'midnight', '1', '7)']
+                                                       "'midnight'", '1', '7)']
     riemann_handler = 'RiemannHandler'
     config_template['handlers'][riemann_handler] = {}
     config_template['handlers'][riemann_handler]['host'] = diamond_config['riemann_host']
@@ -104,9 +118,15 @@ def create_main_config(config_paths, diamond_config, cloudify_id):
         config_template.write(f)
 
 
-def install_collector(properties, config_paths):
+def install_collectors(config_paths, diamond_config):
+    if 'collectors' in diamond_config.keys():
+        for short_name, collector_properties in diamond_config['collectors'].items():
+            install_collector(short_name, collector_properties, config_paths)
 
-    short_name = properties['meta']['short_name']
+
+def install_collector(short_name, properties, config_paths):
+    from configobj import ConfigObj
+
     name = properties['meta']['name']
     url = properties['meta']['url']
 
@@ -121,7 +141,7 @@ def install_collector(properties, config_paths):
     # create and write collector config
     collector_config = ConfigObj()
     collector_config['enabled'] = 'True'
-    if properties.has_key['config']:
+    if 'config' in properties.keys():
         for key, value in properties['config'].items():
             collector_config[key] = value
 

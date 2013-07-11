@@ -24,8 +24,8 @@ class CeleryRegisteredTasksCollector(diamond.collector.Collector):
     def get_default_config(self):
         config = super(CeleryRegisteredTasksCollector, self).get_default_config()
         config.update({
-            'enabled' : 'True',
-            'broker_url' : 'amqp://'
+            'enabled': 'True',
+            'broker_url': 'amqp://'
         })
         return config
 

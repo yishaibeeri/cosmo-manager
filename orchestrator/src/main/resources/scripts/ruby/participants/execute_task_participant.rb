@@ -16,6 +16,7 @@
 
 java_import org.cloudifysource::cosmo::tasks::TaskEventListener
 java_import org.cloudifysource::cosmo::tasks::TaskExecutor
+java_import java.lang.Exception
 
 require 'json'
 require 'securerandom'

@@ -55,12 +55,12 @@ class VagrantLxcBoot:
         self.installer = PackageInstaller()
 
     def install_python_dev(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "install", "python-dev"])
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "install", "python-dev"])
         if return_code != 0:
             raise subprocess.CalledProcessError(cmd="apt-get install python-dev", returncode=1, output=sys.stderr)
 
     def install_python_pip(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "install", "python-pip"])
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "install", "python-pip"])
         if return_code != 0:
             raise subprocess.CalledProcessError(cmd="apt-get install python-pip", returncode=1, output=sys.stderr)
 
@@ -75,9 +75,9 @@ class VagrantLxcBoot:
             raise subprocess.CalledProcessError(cmd="pip install timeout-decorator", returncode=1, output=sys.stderr)
 
     def update_apt_registry(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "update"])
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "update"])
         if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="apt-get install python-pip", returncode=1, output=sys.stderr)
+            raise subprocess.CalledProcessError(cmd="apt-get update", returncode=1, output=sys.stderr)
 
     def sudo(self, command):
             return "sudo {0}".format(command)

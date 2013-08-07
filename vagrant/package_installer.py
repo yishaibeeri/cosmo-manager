@@ -49,7 +49,7 @@ class PackageInstaller:
         self.run_with_retry_and_timeout("sudo apt-get -q update")
 
     def apt_get_install(self, package):
-        self.run_with_retry_and_timeout("sudo apt-get install -y -q {0}".format(package))
+        self.run_with_retry_and_timeout("sudo apt-get install -y {0}".format(package))
 
     def add_apt(self, repo):
         self.run_with_retry_and_timeout("sudo add-apt-repository -y {0}".format(repo))

@@ -73,8 +73,8 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
             doAnswer(new Answer<Void>() {
                 @Override
                 public Void answer(InvocationOnMock invocation) throws Throwable {
-                    logger.debug("Mock task executor is \"sending\" task... invocation arguments were : "
-                            + StringUtils.arrayToDelimitedString(invocation.getArguments(), ","));
+                    logger.debug("Mock task executor is \"sending\" task... invocation arguments were : " +
+                            StringUtils.arrayToDelimitedString(invocation.getArguments(), ","));
                     logger.debug("Throwing exception as a response to sendTask");
                     throw new Exception("Failed sending task");
                 }

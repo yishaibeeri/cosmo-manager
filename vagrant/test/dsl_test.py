@@ -42,7 +42,6 @@ class VagrantBootTest(unittest.TestCase):
         vagrant_dir = os.path.abspath(os.path.join(vagrant_test_dir, os.pardir))
         manager_dir = os.path.abspath(os.path.join(vagrant_dir, os.pardir))
 
-
         remote_working_dir = "/home/vagrant/cosmo-work"
 
         local("cd {0} && vagrant up".format(vagrant_dir))
@@ -50,7 +49,6 @@ class VagrantBootTest(unittest.TestCase):
         host_string = "{0}@{1}:{2}".format(self.SSH_CONFIG['username'],
                                            self.SSH_CONFIG['host'],
                                            self.SSH_CONFIG['port'])
-
 
         # package the orchestrator
         local("cd {0}/orchestrator && mvn clean package -Pall".format(manager_dir))

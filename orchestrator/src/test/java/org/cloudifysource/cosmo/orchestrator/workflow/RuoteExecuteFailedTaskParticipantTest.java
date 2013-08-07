@@ -30,12 +30,12 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
-import org.springframework.util.StringUtils;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Arrays;
 import java.util.Map;
 
 import static org.mockito.Matchers.any;
@@ -74,7 +74,7 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
                 @Override
                 public Void answer(InvocationOnMock invocation) throws Throwable {
                     logger.debug("Mock task executor is \"sending\" task... invocation arguments were : " +
-                            StringUtils.arrayToDelimitedString(invocation.getArguments(), ","));
+                            Arrays.toString(invocation.getArguments()));
                     logger.debug("Throwing exception as a response to sendTask");
                     throw new Exception("Failed sending task");
                 }

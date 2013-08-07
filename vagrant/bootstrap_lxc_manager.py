@@ -15,15 +15,12 @@
 # *******************************************************************************/
 
 import argparse
+import os
 from os.path import expanduser
 import subprocess
 import sys
 
 __author__ = 'elip'
-
-from subprocess import CalledProcessError
-from retrying import retry
-import timeout_decorator
 
 USER_HOME = expanduser('~')
 JAVA_OPTS = "-Xms512m -Xmx1024m -XX:PermSize=128m"
@@ -31,114 +28,124 @@ JAVA_OPTS = "-Xms512m -Xmx1024m -XX:PermSize=128m"
 
 class VagrantLxcBoot:
 
+    """
+    This class boots a cosmo management machine with all necessary components.
+    The management machine itself is a virtual box backed vagrant host, and all subsequent agents
+    are lxc backed vagrant guests.
+    Accepts the working directory and the cosmo version.
+    """
     def __init__(self, args):
         self.working_dir = args.working_dir
         self.cosmo_version = args.cosmo_version
         self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
 
-    @retry(stop='stop_after_attempt', stop_max_attempt_number=3, wait_fixed=3000)
-    def install_fabric(self):
-        return_code = subprocess.call(["sudo", "pip", "install", "fabric"])
+        # first thing, update api
+        self.update_apt_registry()
+
+        # install pip for subsequent calls.
+        self.install_python_dev()
+        self.install_python_pip()
+
+        # install decorators for running with timeouts and retries
+        self.install_timeout()
+        self.install_retrying()
+
+        # we can now import the installer, after installing the needed decorators.
+        from package_installer import PackageInstaller
+        self.installer = PackageInstaller()
+
+    def install_python_dev(self):
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "install", "python-dev"])
         if return_code != 0:
-            raise CalledProcessError(cmd="pip install fabric", returncode=1, output=sys.stderr)
+            raise subprocess.CalledProcessError(cmd="apt-get install python-dev", returncode=1, output=sys.stderr)
 
-    def run_fabric(self, command):
-        from fabric.api import local as lrun
-        lrun(command)
+    def install_python_pip(self):
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "install", "python-pip"])
+        if return_code != 0:
+            raise subprocess.CalledProcessError(cmd="apt-get install python-pip", returncode=1, output=sys.stderr)
 
-    @retry(stop='stop_after_attempt', stop_max_attempt_number=3, wait_fixed=3000)
-    def run_with_retry_and_timeout(self, command):
-        try:
-            print command
-            self.run_with_timeout(command)
-        except SystemExit:  # lrun does not throw exception, but just exists the process
-            raise CalledProcessError(cmd=command, returncode=1, output=sys.stderr)
+    def install_retrying(self):
+        return_code = subprocess.call(["sudo", "pip", "install", "retrying"])
+        if return_code != 0:
+            raise subprocess.CalledProcessError(cmd="pip install retrying", returncode=1, output=sys.stderr)
 
-    """
-    Runs the command with a timeout of 10 minutes.
-    Since most command are downloads, we assume that if 10 minutes are not enough
-    then something is wrong. so we kill the process and let the retry decorator execute it again.
-    """
-    @timeout_decorator.timeout(60 * 10)
-    def run_with_timeout(self, command):
-        self.run_fabric(command)
+    def install_timeout(self):
+        return_code = subprocess.call(["sudo", "pip", "install", "timeout-decorator"])
+        if return_code != 0:
+            raise subprocess.CalledProcessError(cmd="pip install timeout-decorator", returncode=1, output=sys.stderr)
 
-    def pip(self, package):
-        self.run_with_retry_and_timeout(self.sudo("pip install --timeout=120 {0}".format(package)))
+    def update_apt_registry(self):
+        return_code = subprocess.call(["sudo", "apt-get", "-y", "-q", "update"])
+        if return_code != 0:
+            raise subprocess.CalledProcessError(cmd="apt-get install python-pip", returncode=1, output=sys.stderr)
 
     def sudo(self, command):
-        return "sudo {0}".format(command)
-
-    def apt_get(self, command):
-        self.run_with_retry_and_timeout(self.sudo("apt-get {0}".format(command)))
-
-    def add_apt(self, command):
-        self.run_with_retry_and_timeout(self.sudo("add-apt-repository {0}".format(command)))
-
-    def apt_key(self, command):
-        self.run_with_retry_and_timeout(self.sudo("apt-key add {0}".format(command)))
-
-    def wget(self, url):
-        self.run_with_retry_and_timeout("wget {0} -P {1}/".format(url, self.working_dir))
+            return "sudo {0}".format(command)
 
     def install_rabbitmq(self):
-        self.run_fabric(self.sudo("sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list"))
+        self.installer.run_fabric(self.sudo(
+            "sed -i '2i deb http://www.rabbitmq.com/debian/ testing main' /etc/apt/sources.list"
+        ))
 
-        self.wget("http://www.rabbitmq.com/rabbitmq-signing-key-public.asc")
-        self.apt_key("rabbitmq-signing-key-public.asc")
-        self.apt_get("update")
-        self.apt_get("install -q -y erlang-nox")
-        self.apt_get("install -y -f ")
-        self.apt_get("install -q -y rabbitmq-server")
-        self.run_fabric(self.sudo("rabbitmq-plugins enable rabbitmq_management"))
-        self.run_fabric(self.sudo("rabbitmq-plugins enable rabbitmq_tracing"))
-        self.run_fabric(self.sudo("service rabbitmq-server restart"))
-        self.run_fabric(self.sudo("rabbitmqctl trace_on"))
+        self.installer.wget("http://www.rabbitmq.com/rabbitmq-signing-key-public.asc", self.working_dir)
+
+        self.installer.apt_key("{0}/rabbitmq-signing-key-public.asc".format(self.working_dir))
+
+        self.installer.apt_get_update()
+        self.installer.apt_get_install("erlang-nox")
+        self.installer.apt_get_install("-f")
+        self.installer.apt_get_install("rabbitmq-server")
+        self.installer.run_fabric(self.sudo("rabbitmq-plugins enable rabbitmq_management"))
+        self.installer.run_fabric(self.sudo("rabbitmq-plugins enable rabbitmq_tracing"))
+        self.installer.run_fabric(self.sudo("service rabbitmq-server restart"))
+        self.installer.run_fabric(self.sudo("rabbitmqctl trace_on"))
 
     def install_lxc_docker(self):
-        self.apt_get("install -q -y python-software-properties")
-        self.apt_get("update -qq")
-        self.add_apt("-y ppa:dotcloud/lxc-docker")
-        self.apt_get("update -qq")
-        self.apt_get("install -q -y lxc-docker")
+        self.installer.apt_get_install("python-software-properties")
+        self.installer.apt_get_update()
+        self.installer.add_apt("ppa:dotcloud/lxc-docker")
+        self.installer.apt_get_update()
+        self.installer.apt_get_install("lxc-docker")
 
     def install_kernel(self):
-        self.add_apt("-y ppa:ubuntu-x-swat/r-lts-backport")
-        self.apt_get("update -qq")
-        self.apt_get("install -q -y linux-image-3.8.0-19-generic")
+        self.installer.add_apt("ppa:ubuntu-x-swat/r-lts-backport")
+        self.installer.apt_get_update()
+        self.installer.apt_get_install("linux-image-3.8.0-19-generic")
 
     def install_riemann(self):
-        self.wget("http://aphyr.com/riemann/riemann_0.2.2_all.deb")
-        self.run_fabric(self.sudo("dpkg -i riemann_0.2.2_all.deb"))
+        self.installer.wget("http://aphyr.com/riemann/riemann_0.2.2_all.deb", self.working_dir)
+        self.installer.run_fabric(self.sudo("dpkg -i {0}/riemann_0.2.2_all.deb".format(self.working_dir)))
 
     def install_java(self):
-        self.apt_get("install -y openjdk-7-jdk")
+        self.installer.apt_get_install("openjdk-7-jdk")
 
     def install_celery(self):
-        self.pip("billiard==2.7.3.28")
-        self.pip("celery==3.0.19")
-        self.pip("python-vagrant")
-        self.pip("bernhard")
+        self.installer.pip("billiard==2.7.3.28")
+        self.installer.pip("celery==3.0.19")
+        self.installer.pip("python-vagrant")
+        self.installer.pip("bernhard")
 
     def install_vagrant(self):
-        self.wget(
+        self.installer.wget(
             "http://files.vagrantup.com/packages/22b76517d6ccd4ef232a4b4ecbaa276aff8037b8/vagrant_1.2.6_x86_64.deb"
-        )
-        self.run_fabric(self.sudo("dpkg -i vagrant_1.2.6_x86_64.deb"))
+            , self.working_dir)
+        self.installer.run_fabric(self.sudo("dpkg -i {0}/vagrant_1.2.6_x86_64.deb".format(self.working_dir)))
         self.install_vagrant_lxc()
         self.add_lxc_box("precise64", "http://dl.dropbox.com/u/13510779/lxc-precise-amd64-2013-07-12.box")
 
     def install_vagrant_lxc(self):
-        self.run_fabric("vagrant plugin install vagrant-lxc")
+        self.installer.run_fabric("vagrant plugin install vagrant-lxc")
 
-    """
-    Currently not used. provides some more functionallity between the actual host and the virtual box vagrant guest.
-    See http://www.virtualbox.org/manual/ch04.html
-    """
     def install_guest_additions(self):
-        self.apt_get("install -q -y linux-headers-3.8.0-19-generic dkms")
-        self.run_fabric("echo 'Downloading VBox Guest Additions...'")
-        self.wget("-q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso")
+
+        """
+        Currently not used. provides some more functionality between the actual host and the virtual box vagrant guest.
+        See http://www.virtualbox.org/manual/ch04.html
+        """
+        self.installer.apt_get_install("linux-headers-3.8.0-19-generic dkms")
+        self.installer.run_fabric("echo 'Downloading VBox Guest Additions...'")
+        self.installer.wget("-q http://dlc.sun.com.edgesuite.net/virtualbox/4.2.12/VBoxGuestAdditions_4.2.12.iso",
+                            self.working_dir)
 
         guest_additions_script = """mount -o loop,ro /home/vagrant/VBoxGuestAdditions_4.2.12.iso /mnt
 echo yes | /mnt/VBoxLinuxAdditions.run
@@ -146,13 +153,15 @@ umount /mnt
 rm /root/guest_additions.sh
 """
 
-        self.run_fabric("echo -e '" + guest_additions_script + "' > /root/guest_additions.sh")
-        self.run_fabric("chmod 700 /root/guest_additions.sh")
-        self.run_fabric(
+        self.installer.run_fabric("echo -e '" + guest_additions_script + "' > /root/guest_additions.sh")
+        self.installer.run_fabric("chmod 700 /root/guest_additions.sh")
+        self.installer.run_fabric(
             "sed -i -E 's#^exit 0#[ -x /root/guest_additions.sh ] \\&\\& /root/guest_additions.sh#' /etc/rc.local"
         )
-        self.run_fabric("echo 'Installation of VBox Guest Additions is proceeding in the background.'")
-        self.run_fabric("echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'")
+        self.installer.run_fabric("echo 'Installation of VBox Guest Additions is proceeding in the background.'")
+        self.installer.run_fabric(
+            "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'"
+        )
 
     def install_cosmo(self):
 
@@ -166,30 +175,35 @@ java {0} -jar {1}/cosmo.jar $ARGS
                     ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self\
             .jar_name + ".jar"
 
-        self.wget(get_cosmo)
+        self.installer.wget(get_cosmo, self.working_dir)
 
-        self.run_fabric("mv {0}/{1}.jar cosmo.jar".format(self.working_dir, self.jar_name))
+        self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
         cosmo_exec.write(run_script)
 
-        self.run_fabric("chmod +x " + script_path)
+        self.installer.run_fabric("chmod +x " + script_path)
 
-        self.run_fabric("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir, USER_HOME))
+        self.installer.run_fabric("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir, USER_HOME))
 
     def add_lxc_box(self, name, url):
-        self.run_with_retry_and_timeout(
+        self.installer.run_with_retry_and_timeout(
             "vagrant box add {0} {1}".format(name, url)
         )
 
+    def install_lxc(self):
+        file_dir = os.path.abspath(os.path.join(__file__, os.pardir))
+        self.installer.run_fabric(self.sudo("chmod +x {0}/travis_lxc_workaround.sh".format(file_dir)))
+        self.installer.run_with_retry_and_timeout(self.sudo("{0}/travis_lxc_workaround.sh".format(file_dir)))
+
     def reboot(self):
-        self.run_fabric("shutdown -r +1")
+        self.installer.run_fabric("shutdown -r +1")
 
     def bootstrap(self):
-        self.install_fabric()
-        self.install_lxc_docker()
-        self.install_kernel()
+        self.install_lxc()
+        # self.install_lxc_docker()
+        # self.install_kernel()
         self.install_rabbitmq()
         self.install_riemann()
         self.install_celery()

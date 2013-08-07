@@ -54,7 +54,7 @@ import static org.mockito.Mockito.mock;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringContextTests {
 
-    protected static Logger logger = LoggerFactory.getLogger(this.getClass());
+    protected static Logger logger = LoggerFactory.getLogger(RuoteExecuteFailedTaskParticipantTest.class);
 
 
     /**

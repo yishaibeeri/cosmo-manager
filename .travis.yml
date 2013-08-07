@@ -3,26 +3,43 @@ language: java
 jdk:
   - openjdk7
   
-before_script:
-   - "gem install travis-artifacts"
-   - "wget http://aphyr.com/riemann/riemann_0.2.2_all.deb"
-   - "sudo dpkg -i riemann_0.2.2_all.deb"
-   - "sudo touch /var/log/riemann/riemann.log"
-   - "sudo chmod 666 /var/log/riemann/riemann.log"
-
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
+
+# compile, package and install the cosmo-manager artifacts. note : tests are not run at this point.
+
    - "mvn install -DskipTests -f travis-pom.xml"
 
-script:
-#    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
-   - "mvn verify -f travis-pom.xml"
+before_script:
 
+# prepare the orchsetrator-all jar. includes all dependencies. for running a full cycle dsl test.
+
+   - "mvn install -Pall -f orchestrator/pom.xml"
+   - "mkdir $HOME/cosmo-work"
+
+# install all necessary cosmo management components.
+
+   - "sudo python2.7 vagrant/bootstrap_lxc_manager.py --working_dir=$HOME/cosmo-work --cosmo_version=0.1-SNAPSHOT"
+
+script:
+
+#    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
+
+   # run unit and integration test
+
+   - "mvn verify -f travis-pom.xml"
+   
 after_success:
-  - "cd orchestrator;mvn install -Pall"
+  - "test ${TRAVIS_BRANCH} = develop && gem install travis-artifacts"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
+
+  # run the python web server example dsl after verify passes
+
+  - "$HOME/cosmo-work/cosmo.sh --dsl=$HOME/test/vagrant/python_webserver/python-webserver.yaml"
+  - "wget http://10.0.3.5:8888"
+
 
 env:
  global:

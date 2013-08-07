@@ -30,6 +30,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.testng.AbstractTestNGSpringContextTests;
+import org.springframework.util.StringUtils;
 import org.testng.annotations.Test;
 
 import javax.inject.Inject;
@@ -72,7 +73,9 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
             doAnswer(new Answer<Void>() {
                 @Override
                 public Void answer(InvocationOnMock invocation) throws Throwable {
-                    logger.debug("Answering to invocation : " + invocation);
+                    logger.debug("Mock task executor is \"sending\" task... invocation arguments were : "
+                            + StringUtils.arrayToDelimitedString(invocation.getArguments(), ","));
+                    logger.debug("Throwing exception as a response to sendTask");
                     throw new Exception("Failed sending task");
                 }
             })

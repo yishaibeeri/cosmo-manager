@@ -17,6 +17,8 @@ package org.cloudifysource.cosmo.orchestrator.workflow;
 
 import com.google.common.collect.Maps;
 import org.cloudifysource.cosmo.config.TestConfig;
+import org.cloudifysource.cosmo.logging.Logger;
+import org.cloudifysource.cosmo.logging.LoggerFactory;
 import org.cloudifysource.cosmo.tasks.TaskEventListener;
 import org.cloudifysource.cosmo.tasks.TaskExecutor;
 import org.jruby.embed.InvokeFailedException;
@@ -51,6 +53,9 @@ import static org.mockito.Mockito.mock;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringContextTests {
 
+    protected static Logger logger = LoggerFactory.getLogger(this.getClass());
+
+
     /**
      * Test configuration.
      */
@@ -60,10 +65,14 @@ public class RuoteExecuteFailedTaskParticipantTest extends AbstractTestNGSpringC
 
         @Bean
         public TaskExecutor executor() throws IOException {
+
+            logger.debug("Initializing mock task executor");
+
             final TaskExecutor taskExecutor = mock(TaskExecutor.class);
             doAnswer(new Answer<Void>() {
                 @Override
                 public Void answer(InvocationOnMock invocation) throws Throwable {
+                    logger.debug("Answering to invocation : " + invocation);
                     throw new Exception("Failed sending task");
                 }
             })

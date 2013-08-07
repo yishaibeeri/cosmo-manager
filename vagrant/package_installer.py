@@ -58,4 +58,4 @@ class PackageInstaller:
         self.run_with_retry_and_timeout("sudo apt-key add {0}".format(key_file))
 
     def wget(self, url, target_dir):
-        self.run_with_retry_and_timeout("wget {0} -P {1}/".format(url, target_dir))
+        self.run_with_retry_and_timeout("wget {0} -r -N -P {1}/".format(url, target_dir))

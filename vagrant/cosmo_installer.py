@@ -80,8 +80,6 @@ export VAGRANT_DEFAULT_PROVIDER=lxc
 java {0} -jar {1}/cosmo.jar $ARGS
 """.format(JAVA_OPTS, self.working_dir)
 
-        self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
-
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
         cosmo_exec.write(run_script)

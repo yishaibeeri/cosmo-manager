@@ -17,67 +17,29 @@
 import argparse
 import os
 from os.path import expanduser
-import subprocess
-import sys
+from prerequisites_installer import PrerequisitesInstaller
 
 __author__ = 'elip'
 
 USER_HOME = expanduser('~')
-JAVA_OPTS = "-Xms512m -Xmx1024m -XX:PermSize=128m"
 
 
-class VagrantLxcBoot:
+class ManagerBootstrapper:
 
     """
     This class boots a cosmo management machine with all necessary components.
     The management machine itself is a virtual box backed vagrant host, and all subsequent agents
     are lxc backed vagrant guests.
-    Accepts the working directory and the cosmo version.
+    Accepts the working directory.
     """
-    def __init__(self, args):
-        self.working_dir = args.working_dir
-        self.cosmo_version = args.cosmo_version
-        self.jar_name = "orchestrator-" + self.cosmo_version + "-all"
+    def __init__(self, working_dir):
+        self.working_dir = working_dir
 
-        # first thing, update api
-        self.update_apt_registry()
-
-        # install pip for subsequent calls.
-        self.install_python_dev()
-        self.install_python_pip()
-
-        # install decorators for running with timeouts and retries
-        self.install_timeout()
-        self.install_retrying()
+        PrerequisitesInstaller().install()
 
         # we can now import the installer, after installing the needed decorators.
         from package_installer import PackageInstaller
         self.installer = PackageInstaller()
-
-    def install_python_dev(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "install", "python-dev"])
-        if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="apt-get install python-dev", returncode=1, output=sys.stderr)
-
-    def install_python_pip(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "install", "python-pip"])
-        if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="apt-get install python-pip", returncode=1, output=sys.stderr)
-
-    def install_retrying(self):
-        return_code = subprocess.call(["sudo", "pip", "install", "retrying"])
-        if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="pip install retrying", returncode=1, output=sys.stderr)
-
-    def install_timeout(self):
-        return_code = subprocess.call(["sudo", "pip", "install", "timeout-decorator"])
-        if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="pip install timeout-decorator", returncode=1, output=sys.stderr)
-
-    def update_apt_registry(self):
-        return_code = subprocess.call(["sudo", "apt-get", "-y", "update"])
-        if return_code != 0:
-            raise subprocess.CalledProcessError(cmd="apt-get update", returncode=1, output=sys.stderr)
 
     def sudo(self, command):
             return "sudo {0}".format(command)
@@ -163,30 +125,6 @@ rm /root/guest_additions.sh
             "echo '\"vagrant reload\" can be used in about 2 minutes to activate the new guest additions.'"
         )
 
-    def install_cosmo(self):
-
-        run_script = """#!/bin/sh
-ARGS=\"$@\"
-export VAGRANT_DEFAULT_PROVIDER=lxc
-java {0} -jar {1}/cosmo.jar $ARGS
-""".format(JAVA_OPTS, self.working_dir)
-
-        get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
-                    ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self\
-            .jar_name + ".jar"
-
-        self.installer.wget(get_cosmo, self.working_dir)
-
-        self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
-
-        script_path = self.working_dir + "/cosmo.sh"
-        cosmo_exec = open(script_path, "w")
-        cosmo_exec.write(run_script)
-
-        self.installer.run_fabric("chmod +x " + script_path)
-
-        self.installer.run_fabric("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir, USER_HOME))
-
     def add_lxc_box(self, name, url):
         self.installer.run_with_retry_and_timeout(
             "vagrant box add {0} {1}".format(name, url)
@@ -209,7 +147,6 @@ java {0} -jar {1}/cosmo.jar $ARGS
         self.install_celery()
         self.install_vagrant()
         self.install_java()
-        self.install_cosmo()
         print "Manager boot completed"
 
 if __name__ == '__main__':
@@ -222,11 +159,6 @@ if __name__ == '__main__':
         help='Working directory for all cosmo installation files',
         default="/home/vagrant/cosmo-work"
     )
-    parser.add_argument(
-        '--cosmo_version',
-        help='Version of cosmo that will be used to deploy the dsl',
-        default='0.1-SNAPSHOT'
-    )
-
-    vagrant_boot = VagrantLxcBoot(parser.parse_args())
+    args = parser.parse_args()
+    vagrant_boot = ManagerBootstrapper(args.working_dir)
     vagrant_boot.bootstrap()

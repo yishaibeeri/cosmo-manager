@@ -6,39 +6,38 @@ jdk:
 install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 
-# compile, package and install the cosmo-manager artifacts. note : tests are not run at this point.
-
+   # compile, package and install the cosmo-manager artifacts. note : tests are not run at this point.
    - "mvn install -DskipTests -f travis-pom.xml"
 
-before_script:
+   # install all necessary cosmo management components.      
+   - "mkdir $HOME/cosmo-work"   
+   - "sudo python2.7 vagrant/prerequisites_installer.py"
+   - "sudo python2.7 vagrant/bootstrap_lxc_manager.py --working_dir=$HOME/cosmo-work"
 
-# prepare the orchsetrator-all jar. includes all dependencies. for running a full cycle dsl test.
-
-#   - "mvn install -Pall -f orchestrator/pom.xml"
-#   - "mkdir $HOME/cosmo-work"
-
-# install all necessary cosmo management components.
-
-#   - "sudo python2.7 vagrant/bootstrap_lxc_manager.py --working_dir=$HOME/cosmo-work --cosmo_version=0.1-SNAPSHOT"
+   
 
 script:
 
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 
    # run unit and integration test
-
    - "mvn verify -f travis-pom.xml"
-   
+
+   # install the cosmo.jar locally
+   - "sudo python2.7 vagrant/cosmo_installer.py --working_dir=$HOME/cosmo-work --local=True"
+
+   # run the example dsl
+  - "$HOME/cosmo-work/cosmo.sh --dsl=$HOME/vagrant/test/python_webserver/python-webserver.yaml && wget http://10.0.3.5:8888"
+
+
+
 after_success:
+
+  # upload artifacts
   - "test ${TRAVIS_BRANCH} = develop && gem install travis-artifacts"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/bootstrapper --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/orchestrator --target-path travisci"
   - "test ${TRAVIS_BRANCH} = develop && travis-artifacts upload --path $HOME/.m2/repository/org/cloudifysource/cosmo/state-cache --target-path travisci"
-
-  # run the python web server example dsl after verify passes
-
-  #- "$HOME/cosmo-work/cosmo.sh --dsl=$HOME/vagrant/test/python_webserver/python-webserver.yaml && wget http://10.0.3.5:8888"
-
 
 env:
  global:

@@ -139,9 +139,9 @@ rm /root/guest_additions.sh
         self.installer.run_fabric("shutdown -r +1")
 
     def bootstrap(self):
-        # self.install_lxc()
-        self.install_lxc_docker()
-        self.install_kernel()
+        self.install_lxc()
+        # self.install_lxc_docker()
+        # self.install_kernel()
         self.install_rabbitmq()
         self.install_riemann()
         self.install_celery()

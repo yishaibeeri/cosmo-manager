@@ -27,7 +27,7 @@ script:
    - "sudo python2.7 vagrant/cosmo_installer.py --working_dir=$HOME/cosmo-work --local=True"
 
    # run the example dsl
-   - "$HOME/cosmo-work/cosmo.sh --dsl=$HOME/vagrant/test/python_webserver/python-webserver.yaml && wget http://10.0.3.5:8888"
+   - "$HOME/cosmo-work/cosmo.sh --dsl=vagrant/test/python_webserver/python-webserver.yaml && wget http://10.0.3.5:8888"
 
 
 

@@ -7,7 +7,7 @@ install:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 
    # compile, package and install the cosmo-manager artifacts. note : tests are not run at this point.
-   - "mvn install -DskipTests -f travis-pom.xml"
+   - "mvn install -q -DskipTests -f travis-pom.xml"
 
    # install all necessary cosmo management components.      
    - "mkdir $HOME/cosmo-work"   
@@ -21,7 +21,7 @@ script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 
    # run unit and integration test
-   - "mvn verify -f travis-pom.xml"
+   - "mvn verify -q -f travis-pom.xml"
 
    # install the cosmo.jar locally
    - "sudo python2.7 vagrant/cosmo_installer.py --working_dir=$HOME/cosmo-work --local=True"

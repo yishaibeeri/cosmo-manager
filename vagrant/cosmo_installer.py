@@ -48,6 +48,7 @@ java {0} -jar {1}/cosmo.jar $ARGS
         self.installer.wget(get_cosmo, self.working_dir)
 
         self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
+        self.run_fabric("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir)) 
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")
@@ -92,7 +93,7 @@ then
 else
         ARGS="$@"
         export VAGRANT_DEFAULT_PROVIDER=lxc
-        java -Xms512m -Xmx1024m -XX:PermSize=128m -jar /home/vagrant/cosmo-work/cosmo.jar $ARGS
+        java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file:///home/vagrant/cosmo-work/log4j.properties -jar /home/vagrant/cosmo-work/cosmo.jar $ARGS
 fi 
 """.format(JAVA_OPTS, self.working_dir)
 

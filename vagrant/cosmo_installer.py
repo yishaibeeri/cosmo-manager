@@ -7,7 +7,6 @@ from prerequisites_installer import PrerequisitesInstaller
 
 __author__ = 'elip'
 
-JAVA_OPTS = "-Xms512m -Xmx1024m -XX:PermSize=128m"
 USER_HOME = expanduser('~')
 
 
@@ -39,7 +38,7 @@ class CosmoInstaller:
 ARGS=\"$@\"
 export VAGRANT_DEFAULT_PROVIDER=lxc
 java {0} -jar {1}/cosmo.jar $ARGS
-""".format(JAVA_OPTS, self.working_dir)
+""".format(self.working_dir)
 
         get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
                     ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self \
@@ -93,9 +92,9 @@ then
 else
         ARGS="$@"
         export VAGRANT_DEFAULT_PROVIDER=lxc
-        java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file:///home/vagrant/cosmo-work/log4j.properties -jar /home/vagrant/cosmo-work/cosmo.jar $ARGS
+        java -Xms512m -Xmx1024m -XX:PermSize=128m -Dlog4j.configuration=file://{0}/log4j.properties -jar {0}/cosmo.jar $ARGS
 fi 
-""".format(JAVA_OPTS, self.working_dir)
+""".format(self.working_dir)
 
         script_path = self.working_dir + "/cosmo.sh"
         cosmo_exec = open(script_path, "w")

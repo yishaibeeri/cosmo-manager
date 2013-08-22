@@ -24,10 +24,12 @@ script:
    - "mvn verify -q -f travis-pom.xml"
 
    # install the cosmo.jar locally
+   - "echo 'log4j.logger.org.cloudifysource.cosmo.tasks.CeleryWorkerProcess = DEBUG' >> vagrant/log4j.properties"
    - "sudo python2.7 vagrant/cosmo_installer.py --working_dir=$HOME/cosmo-work --local=True"
 
    # run the example dsl
-   - "$HOME/cosmo-work/cosmo.sh --dsl=vagrant/test/python_webserver/python-webserver.yaml && wget http://10.0.3.5:8888"
+   - "$HOME/cosmo-work/cosmo.sh --dsl=vagrant/test/python_webserver/python-webserver.yaml"
+   - "wget -O /dev/stdout http://10.0.3.5:8888"
 
 
 

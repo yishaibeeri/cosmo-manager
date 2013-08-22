@@ -41,7 +41,7 @@ class CosmoInstaller:
         self.installer.wget(get_cosmo, self.working_dir)
 
         self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
-        self.run_fabric("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir)) 
+        self.installer.run_fabric("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir)) 
 
         self.install_cosmo_common()
 

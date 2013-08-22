@@ -29,22 +29,22 @@ import java.util.Map;
  */
 public class Policies {
 
-    private Map<String, String> rules = Maps.newHashMap();
-    private Map<String, String> types = Maps.newHashMap();
+    private Map<String, RuleDefinition> rules = Maps.newHashMap();
+    private Map<String, PolicyDefinition> types = Maps.newHashMap();
 
-    public Map<String, String> getRules() {
+    public Map<String, RuleDefinition> getRules() {
         return rules;
     }
 
-    public void setRules(Map<String, String> rules) {
+    public void setRules(Map<String, RuleDefinition> rules) {
         this.rules = rules;
     }
 
-    public Map<String, String> getTypes() {
+    public Map<String, PolicyDefinition> getTypes() {
         return types;
     }
 
-    public void setTypes(Map<String, String> types) {
+    public void setTypes(Map<String, PolicyDefinition> types) {
         this.types = types;
     }
 

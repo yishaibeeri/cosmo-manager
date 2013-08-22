@@ -39,6 +39,8 @@ import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+import static org.fest.assertions.api.Assertions.assertThat;
+
 /**
  * Tests ruote "execute task" participant.
  *
@@ -79,7 +81,6 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
      */
     @Test(timeOut = 30000)
     public void testTaskExecution() throws URISyntaxException, InterruptedException {
-
         final String resourceId = "vm_node";
         final String execute = "start_machine";
         final CountDownLatch latch = new CountDownLatch(1);
@@ -97,13 +98,14 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         worker.addListener("http://localhost:8080/", new TaskReceivedListener() {
 
             @Override
-            public void onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
                 boolean valid = Objects.equal(target, "http://localhost:8080/");
                 valid &= Objects.equal(taskName, execute);
                 valid &= Objects.equal(kwargs.get("resource_id"), resourceId);
                 if (valid) {
                     latch.countDown();
                 }
+                return null;
             }
         });
 
@@ -115,7 +117,6 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
 
     @Test(timeOut = 30000, expectedExceptions = { InvokeFailedException.class })
     public void testTaskExecutionFailure() throws Exception {
-
         final String resourceId = "vm_node";
         final String execute = "start_machine";
 
@@ -132,6 +133,31 @@ public class RuoteExecuteTaskParticipantTest extends AbstractTestNGSpringContext
         final Object id = workflow.asyncExecute();
         runtime.waitForWorkflow(id);
         Assertions.fail("Exception expected!");
+    }
+
+    @Test(timeOut = 30000)
+    public void testTaskExecutionResult() {
+        RuoteJavaParticipant.reset();
+        worker.addListener("task_target", new TaskReceivedListener() {
+            @Override
+            public Object onTaskReceived(String target, String taskName, Map<String, Object> kwargs) {
+                // do nothing..
+                return "mockResult";
+            }
+        });
+        final String radial = "define start_node\n" +
+                "  execute_task target: 'task_target', exec: 'some_method', to_f: 'result', payload: {\n" +
+                "    resource_id: 'some_id'\n" +
+                "  }\n" +
+                "  java class: 'org.cloudifysource.cosmo.orchestrator.workflow.RuoteJavaParticipant'\n";
+
+        final RuoteWorkflow workflow = RuoteWorkflow.createFromString(radial, runtime);
+        final Object id = workflow.asyncExecute();
+        runtime.waitForWorkflow(id);
+
+        final Map<String, Object> workitemFields = RuoteJavaParticipant.getWorkitemFields();
+        assertThat(workitemFields).containsKey("result");
+        assertThat(workitemFields.get("result")).isEqualTo("mockResult");
     }
 
 }

@@ -34,12 +34,6 @@ class CosmoInstaller:
         the public maven repository.
         """
 
-        run_script = """#!/bin/sh
-ARGS=\"$@\"
-export VAGRANT_DEFAULT_PROVIDER=lxc
-java {0} -jar {1}/cosmo.jar $ARGS
-""".format(self.working_dir)
-
         get_cosmo = "https://s3.amazonaws.com/cosmo-snapshot-maven-repository/travisci/home/travis/" \
                     ".m2/repository/org/cloudifysource/cosmo/orchestrator/" + self.cosmo_version + "/" + self \
                     .jar_name + ".jar"
@@ -49,31 +43,9 @@ java {0} -jar {1}/cosmo.jar $ARGS
         self.installer.run_fabric("mv {0}/{1}.jar {0}/cosmo.jar".format(self.working_dir, self.jar_name))
         self.run_fabric("cp {0} {1}".format("/vagrant/log4j.properties", self.working_dir)) 
 
-        script_path = self.working_dir + "/cosmo.sh"
-        cosmo_exec = open(script_path, "w")
-        cosmo_exec.write(run_script)
+        self.install_cosmo_common()
 
-        self.installer.run_fabric("chmod +x " + script_path)
-
-        self.installer.run_fabric("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir,
-                                                                                                   USER_HOME))
-
-    def install_cosmo_from_local(self):
-
-        """
-        Use this method when you want to run cosmo on your local machine.
-        It will compile the jar and copy it to the right place.
-        """
-
-        vagrant_dir = os.path.abspath(os.path.join(__file__, os.pardir))
-        manager_dir = os.path.abspath(os.path.join(vagrant_dir, os.pardir))
-
-        local("cd {0}/orchestrator && mvn clean package -Pall".format(manager_dir))
-
-        # copy to working directory
-        local("cp -r {0}/orchestrator/target/cosmo.jar {1}".format(
-            manager_dir, self.working_dir))
-
+    def install_cosmo_common(self):
         run_script = """#!/bin/sh
 if [ $# -gt 0 ] && [ "$1" = "undeploy" ]
 then
@@ -104,6 +76,27 @@ fi
 
         self.installer.run_fabric("echo \"alias cosmo='{0}/cosmo.sh'\" > {1}/.bash_aliases".format(self.working_dir,
                                                                                                    USER_HOME))
+
+    def install_cosmo_from_local(self):
+
+        """
+        Use this method when you want to run cosmo on your local machine.
+        It will compile the jar and copy it to the right place.
+        """
+
+        vagrant_dir = os.path.abspath(os.path.join(__file__, os.pardir))
+        manager_dir = os.path.abspath(os.path.join(vagrant_dir, os.pardir))
+
+        local("cd {0}/orchestrator && mvn clean package -Pall".format(manager_dir))
+
+        # copy to working directory
+        local("cp -r {0}/orchestrator/target/cosmo.jar {1}".format(
+            manager_dir, self.working_dir))
+        
+        local("cp -r {0}/vagrant/log4j.properties {1}".format(
+            manager_dir, self.working_dir))
+
+        self.install_cosmo_common()
 
 if __name__ == '__main__':
 

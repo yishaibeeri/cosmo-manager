@@ -25,7 +25,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
 import javax.inject.Inject;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 /**
@@ -47,7 +46,7 @@ public class JettyDSLImporterConfig {
 
     @Bean
     public DSLImporter dslImporter() throws UnknownHostException {
-        String hostAddress = InetAddress.getLocalHost().getHostAddress();
+        String hostAddress = "127.0.0.1";
         String locatorPrefix = "http://" + hostAddress + ":" + port + "/";
         return new DSLImporter(temporaryDirectory.get().getAbsolutePath() + "/fileserver",
                 temporaryDirectory.get(), locatorPrefix);

@@ -13,7 +13,7 @@ install:
    - "mkdir $HOME/cosmo-work"   
    - "sudo python2.7 vagrant/prerequisites_installer.py"
    - "sudo python2.7 vagrant/manager_bootstrapper.py --working_dir=$HOME/cosmo-work"
-   
+
 
    
 
@@ -22,7 +22,7 @@ script:
 #    !!! WARNING: NEVER USE THE mvn -X SWITCH AS IT LOGS THE SECRET KEY ENV VARIABLES !!!
 
    # run unit and integration test
-   - "mvn verify -q -f travis-pom.xml"
+   # - "mvn verify -q -f travis-pom.xml"
 
    # install the cosmo.jar locally
    - "echo 'log4j.logger.org.cloudifysource.cosmo.tasks.CeleryWorkerProcess = DEBUG' >> vagrant/log4j.properties"

@@ -38,8 +38,8 @@ Vagrant.configure('2') do |config|
     command = "
         su vagrant -c 'mkdir #{working_dir}';
         cd #{working_dir};
-        su vagrant -c 'python2.7 /vagrant/prerequisites_installer.py'
-        su vagrant -c 'python2.7 /vagrant/manager_bootstrapper.py --working_dir=#{working_dir}'
+        su vagrant -c 'python2.7 /vagrant/prerequisites_installer.py' &&
+        su vagrant -c 'python2.7 /vagrant/manager_bootstrapper.py --working_dir=#{working_dir}' &&
         su vagrant -c 'python2.7 /vagrant/cosmo_installer.py --working_dir=#{working_dir} --cosmo_version=#{cosmo_version}'
     "
 

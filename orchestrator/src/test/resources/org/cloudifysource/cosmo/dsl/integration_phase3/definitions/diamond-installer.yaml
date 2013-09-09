@@ -1,0 +1,8 @@
+definitions:
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.diamond_installer.installer:
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.middleware_component.installer"
+                url: "http://10.0.0.1:53229/diamond-installer.zip"

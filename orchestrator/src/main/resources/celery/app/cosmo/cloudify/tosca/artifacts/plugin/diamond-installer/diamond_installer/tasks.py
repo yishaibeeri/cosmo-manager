@@ -15,26 +15,21 @@
 # *******************************************************************************/
 
 """
-A celery tasks for installing and starting diamond monitoring (+ includes 1 monitor)
+A celery tasks for installing and starting diamond monitoring
 """
 
-import urllib2
 import os
 from os import path
-from cosmo.celery import celery
+from cosmo.celery import celery, get_cosmo_properties
+from configobj import ConfigObj
 
 
 @celery.task
 def install(diamond_config, **kwargs):
-    # install dependencies
-    if not 'skip_install_dependencies' in diamond_config.keys():
-        install_dependencies()
     config_paths = ConfigPaths(diamond_config)
     make_directories(config_paths)
     create_main_config(config_paths, diamond_config)
-    install_collectors(config_paths, diamond_config)
-    if not 'skip_workaround' in diamond_config.keys():
-        workaround_temp_diamond_bug(diamond_config)
+    # install_collectors(config_paths, diamond_config)
 
 
 @celery.task
@@ -58,7 +53,7 @@ def restart(diamond_config, **kwargs):
     stop(diamond_config)
     config_paths = ConfigPaths(diamond_config)
     create_main_config(config_paths, diamond_config)
-    install_collectors(config_paths, diamond_config)
+    # install_collectors(config_paths, diamond_config)
     start(diamond_config)
 
 
@@ -74,12 +69,6 @@ class ConfigPaths(object):
         self.diamond_log_path = path.join(self.logs_dir, 'diamond.log')
 
 
-def install_dependencies():
-    os.system("sudo pip install diamond")
-    # for riemann handler
-    os.system("sudo pip install bernhard")
-
-
 def make_directories(config_paths):
     os.makedirs(config_paths.root_dir)
     os.mkdir(config_paths.collectors_dir)
@@ -88,8 +77,6 @@ def make_directories(config_paths):
 
 
 def create_main_config(config_paths, diamond_config):
-    # load template diamond configuration (only possible after 'pip install diamond')
-    from configobj import ConfigObj
     config_template = ConfigObj('/etc/diamond/diamond.conf.example')
 
     # locate where the handlers code is
@@ -107,53 +94,41 @@ def create_main_config(config_paths, diamond_config):
     config_template['server']['handlers_path'] = diamond_handlers
     config_template['logger_root']['level'] = 'DEBUG'
     config_template['handler_rotated_file']['level'] = 'DEBUG'
-    config_template['handler_rotated_file']['args'] = ["('{0}'".format(config_paths.diamond_log_path),
-                                                       "'midnight'", '1', '7)']
+    config_template['handler_rotated_file']['args'] = ["('{0}'".format(config_paths.diamond_log_path), "'midnight'", '1', '7)']
     riemann_handler = 'RiemannHandler'
     config_template['handlers'][riemann_handler] = {}
-    config_template['handlers'][riemann_handler]['host'] = diamond_config['riemann_host']
-    config_template['handlers'][riemann_handler]['port'] = diamond_config['riemann_port']
-    config_template['handlers'][riemann_handler]['transport'] = diamond_config['riemann_transport']
+    config_template['handlers'][riemann_handler]['host'] = get_cosmo_properties()['management_ip']
     with open(config_paths.main_config_path, 'w') as f:
         config_template.write(f)
 
 
-def install_collectors(config_paths, diamond_config):
-    if 'collectors' in diamond_config.keys():
-        for short_name, collector_properties in diamond_config['collectors'].items():
-            install_collector(short_name, collector_properties, config_paths)
-
-
-def install_collector(short_name, properties, config_paths):
-    from configobj import ConfigObj
-
-    name = properties['meta']['name']
-    url = properties['meta']['url']
-
-    # download plugin (single file) to collectors directory
-    response = urllib2.urlopen(url)
-    collector_dir = path.join(config_paths.collectors_dir, short_name)
-    os.mkdir(collector_dir)
-    collector_path = path.join(collector_dir, '{0}.py'.format(short_name))
-    with open(collector_path, 'w') as f:
-        f.write(response.read())
-
-    # create and write collector config
-    collector_config = ConfigObj()
-    collector_config['enabled'] = 'True'
-    if 'config' in properties.keys():
-        for key, value in properties['config'].items():
-            collector_config[key] = value
-
-    collector_config_path = path.join(config_paths.collectors_config_dir,
-                                      '{0}.conf'.format(name))
-    with open(collector_config_path, 'w') as f:
-        collector_config.write(f)
-
-
-def workaround_temp_diamond_bug(diamond_config):
-    from diamond import server
-    server_py_path = path.join(path.dirname(server.__file__), 'server.py')
-    temp_path = '{0}/temp.py'.format(diamond_config['workdir'])
-    os.system("sudo sed s/handername/handlername/ {0} > {1}".format(server_py_path, temp_path))
-    os.system("sudo cp {0} {1}".format(temp_path, server_py_path))
+# def install_collectors(config_paths, diamond_config):
+#     if 'collectors' in diamond_config.keys():
+#         for short_name, collector_properties in diamond_config['collectors'].items():
+#             install_collector(short_name, collector_properties, config_paths)
+#
+#
+# def install_collector(short_name, properties, config_paths):
+#
+#     name = properties['meta']['name']
+#     url = properties['meta']['url']
+#
+#     # download plugin (single file) to collectors directory
+#     response = urllib2.urlopen(url)
+#     collector_dir = path.join(config_paths.collectors_dir, short_name)
+#     os.mkdir(collector_dir)
+#     collector_path = path.join(collector_dir, '{0}.py'.format(short_name))
+#     with open(collector_path, 'w') as f:
+#         f.write(response.read())
+#
+#     # create and write collector config
+#     collector_config = ConfigObj()
+#     collector_config['enabled'] = 'True'
+#     if 'config' in properties.keys():
+#         for key, value in properties['config'].items():
+#             collector_config[key] = value
+#
+#     collector_config_path = path.join(config_paths.collectors_config_dir,
+#                                       '{0}.conf'.format(name))
+#     with open(collector_config_path, 'w') as f:
+#         collector_config.write(f)

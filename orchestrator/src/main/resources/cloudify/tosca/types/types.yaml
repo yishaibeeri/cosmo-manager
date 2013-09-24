@@ -6,6 +6,7 @@ definitions:
     imports:
         - 'celery_worker_installer'
         - 'celery_plugin_installer'
+        - 'diamond_monitor_installer'
         - 'cloudify.policies'
 
     ##################################################################################
@@ -22,6 +23,7 @@ definitions:
                 - "cloudify.tosca.interfaces.host_provisioner"
                 - "cloudify.tosca.interfaces.worker_installer"
                 - "cloudify.tosca.interfaces.plugin_installer"
+                - "cloudify.tosca.interfaces.monitor_installer"
             properties:
                 install_agent: 'false'
 
@@ -144,6 +146,14 @@ definitions:
             operations:
                 - "install"
 
+        # installs and configures a monitoring service on an agent host
+        cloudify.tosca.interfaces.monitor_installer:
+            operations:
+                - "install"
+                - "start"
+                - "stop"
+                - "restart"
+
         # provision and manage a storage volume
         cloudify.tosca.interfaces.volume.volume_provisioner:
             operations:
@@ -230,6 +240,9 @@ definitions:
                             log message: 'successfully installed plugin: ${v:plugin.name} on host: ${node.id}'
                           log message: 'restarting worker on host: ${node.id}'
                           execute_operation operation: 'cloudify.tosca.interfaces.worker_installer.restart'
+                          execute_operation operation: 'cloudify.tosca.interfaces.monitor_installer.install'
+                          execute_operation operation: 'cloudify.tosca.interfaces.monitor_installer.start'
+
 
         cloudify.tosca.types.middleware_server:
             init:

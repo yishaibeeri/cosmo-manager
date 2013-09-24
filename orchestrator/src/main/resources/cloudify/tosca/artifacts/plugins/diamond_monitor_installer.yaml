@@ -1,0 +1,8 @@
+definitions:
+
+    artifacts:
+        cloudify.tosca.artifacts.plugin.diamond_installer:
+            derived_from: "cloudify.tosca.artifacts.agent_plugin"
+            properties:
+                interface: "cloudify.tosca.interfaces.monitor_installer"
+                url: "https://github.com/CloudifySource/cosmo-plugin-diamond-installer/archive/feature/CLOUDIFY-2029-diamond.zip"

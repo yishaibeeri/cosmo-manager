@@ -25,23 +25,6 @@ definitions:
                             management_ip: "10.0.0.1"
                             key: '~/.vagrant.d/insecure_private_key'
                             broker: 'amqp://guest:guest@10.0.0.1:5672//'
-                        diamond_config:
-                            workdir: '/home/vagrant'
-                            user: 'vagrant'
-                            group: 'vagrant'
-                            collectors_reload_interval: '3600'
-                            riemann_host: '10.0.0.1'
-                            riemann_port: '5555'
-                            riemann_transport: 'tcp'
-                            collectors:
-                                celeryd:
-                                    meta:
-                                        url: 'http://10.0.0.1:53229/celeryd.py'
-                                        name: 'CeleryRegisteredTasksCollector'
-                                    config:
-                                        path: 'celeryd'
-                                        broker_url: 'amqp://guest:guest@10.0.0.1:5672//'
-                                        interval: '10'
                     policies:
                         start_detection_policy:
                             rules:
